@@ -1,15 +1,17 @@
 use guess_word::*;
 use std::io;
+use iced::{Application, Settings};
+mod gui; // `gui.rs` の gui モジュールを参照する
 
-fn main() {
+fn main() -> iced::Result {
+    let mut settings = Settings::default();
+    settings.window.size = (400, 600);
+    gui::GuessWord::run(settings)
+}
+
+fn _main() {
     let mut game = Game::default();
     let mut guess = String::new();
-
-    println!("{:?}", game.get_test_anser());
-
-    // if let Ok(x) = game.get_answer() {
-    //     println!("({})", x);
-    // };
 
     loop {
         io::stdin()
