@@ -232,3 +232,133 @@ pub enum GameStatus {
 pub enum GameError {
     GameNotLostError,
 }
+
+/* テスト */
+#[cfg(test)]
+mod tests {
+    use super::*; // 親モジュール=トップレベルのクレートをスコープに取り込む
+
+    #[test]
+    fn test_guess() {
+        let mut game = Game::default();
+        game.answer = "hello".to_string();
+        game.guess("world");
+        assert_eq!(game.guesses.len(), 1);
+    }
+
+    #[rustfmt::skip]
+    #[test]
+    fn test_guess_accuracy() {
+        let mut game = Game::default();
+        game.answer = "haste".to_string();
+        game.guess("heart");
+
+        let spell_guess = super::WordGuess {
+            letters: vec![
+                GuessLetter { letter: 'h', accuracy: HitAccuracy::InRightPlace },
+                GuessLetter { letter: 'e', accuracy: HitAccuracy::InWord },
+                GuessLetter { letter: 'a', accuracy: HitAccuracy::InWord },
+                GuessLetter { letter: 'r', accuracy: HitAccuracy::NotInWord },
+                GuessLetter { letter: 't', accuracy: HitAccuracy::InWord },
+            ],
+        };
+        assert_eq!(game.guesses[0], spell_guess);
+    }
+
+    #[rustfmt::skip]
+    #[test]
+    fn test_guess_count_of_letters() {
+        let mut game = Game::default();
+        game.answer = "sleep".to_string();
+        game.guess("spell");
+
+        let spell_guess = super::WordGuess {
+            letters: vec![
+                GuessLetter { letter: 's', accuracy: HitAccuracy::InRightPlace },
+                GuessLetter { letter: 'p', accuracy: HitAccuracy::InWord },
+                GuessLetter { letter: 'e', accuracy: HitAccuracy::InRightPlace },
+                GuessLetter { letter: 'l', accuracy: HitAccuracy::InWord },
+                GuessLetter { letter: 'l', accuracy: HitAccuracy::NotInWord },
+            ],
+        };
+
+        assert_eq!(game.guesses[0], spell_guess);
+    }
+
+    #[test]
+    fn test_duplicate_guess() {
+        let mut game = Game::default();
+        game.answer = "slump".to_string();
+        game.guess("paste");
+        let (_, result) = game.guess("paste");
+        assert_eq!(result, GuessResult::DuplicateGuess);
+    }
+
+    // 成功した場合のテスト
+    #[test]
+    fn test_win_game() {
+        let mut game = Game::default();
+        game.answer = "slump".to_string();
+        let (status, _) = game.guess("slump");
+        assert_eq!(status, GameStatus::Won);
+    }
+
+    #[test]
+    fn test_incorrect_word() {
+        let mut game = Game::default();
+        game.answer = "slump".to_string();
+        // 写経元だと3文字/5文字で検証しているが境界値の方がよいのでは??
+        let (_, result) = game.guess("slup");
+        assert_eq!(result, GuessResult::IncorrectLength);
+        let (_, result) = game.guess("slumap");
+        assert_eq!(result, GuessResult::IncorrectLength);
+    }
+
+    // 5回ミスったときの検証
+    #[test]
+    fn test_lost_game() {
+        let mut game = Game::default();
+        game.answer = "slump".to_string();
+        game.guess("admit");
+        game.guess("adorn");
+        game.guess("adult");
+        game.guess("affix");
+        game.guess("afire");
+        let (status, _) = game.guess("after");
+        assert_eq!(status, GameStatus::Lost);
+    }
+
+    #[test]
+    fn test_gameover() {
+        let mut game = Game::default();
+        game.answer = "slump".to_string();
+        game.guess("slump");
+        let (status, result) = game.guess("adept");
+        assert_eq!(status, GameStatus::Won);
+        assert_eq!(result, GuessResult::GameOver);
+    }
+
+    #[test]
+    fn test_lost_game_with_gameover() {
+        let mut game = Game::default();
+        game.answer = "slump".to_string();
+        game.guess("admit");
+        game.guess("adorn");
+        game.guess("adult");
+        game.guess("affix");
+        game.guess("afire");
+        game.guess("aping");
+        let (status, result) = game.guess("agony");
+        assert_eq!(status, GameStatus::Lost);
+        assert_eq!(result, GuessResult::GameOver);
+    }
+
+    #[test]
+    fn test_not_in_dictionary() {
+        let mut game = Game::default();
+        game.answer = "slump".to_string();
+        let (status, result) = game.guess("abcde");
+        assert_eq!(status, GameStatus::InProgress);
+        assert_eq!(result, GuessResult::NotInDictionary);
+    }
+}
